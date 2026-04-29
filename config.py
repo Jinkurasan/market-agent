@@ -4,21 +4,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-NOTION_API_KEY = os.getenv("NOTION_API_KEY")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
-NOTE_EMAIL = os.getenv("NOTE_EMAIL")
-NOTE_PASSWORD = os.getenv("NOTE_PASSWORD")
-BLOOMBERG_EMAIL = os.getenv("BLOOMBERG_EMAIL")
-BLOOMBERG_PASSWORD = os.getenv("BLOOMBERG_PASSWORD")
-WSJ_EMAIL = os.getenv("WSJ_EMAIL")
-WSJ_PASSWORD = os.getenv("WSJ_PASSWORD")
-HITSUJI_FX_URL = os.getenv("HITSUJI_FX_URL", "https://hitsujinofx.com/")
+def _get(key: str, default: str = "") -> str:
+    try:
+        import streamlit as st
+        return st.secrets.get(key, os.getenv(key, default))
+    except Exception:
+        return os.getenv(key, default)
+
+ANTHROPIC_API_KEY = _get("ANTHROPIC_API_KEY")
+NOTION_API_KEY = _get("NOTION_API_KEY")
+NOTION_DATABASE_ID = _get("NOTION_DATABASE_ID")
+NOTE_EMAIL = _get("NOTE_EMAIL")
+NOTE_PASSWORD = _get("NOTE_PASSWORD")
+BLOOMBERG_EMAIL = _get("BLOOMBERG_EMAIL")
+BLOOMBERG_PASSWORD = _get("BLOOMBERG_PASSWORD")
+WSJ_EMAIL = _get("WSJ_EMAIL")
+WSJ_PASSWORD = _get("WSJ_PASSWORD")
+HITSUJI_FX_URL = _get("HITSUJI_FX_URL", "https://hitsujinofx.com/")
 
 BASE_DIR = Path(__file__).parent
 SESSION_DIR = BASE_DIR / "sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
-# エージェントに使うモデル
-MODEL_HEAVY = "claude-opus-4-7"    # 収集・要約など複雑なタスク
-MODEL_LIGHT = "claude-sonnet-4-6"  # フォーマット・実行など軽量タスク
+MODEL_HEAVY = "claude-opus-4-7"
+MODEL_LIGHT = "claude-sonnet-4-6"
