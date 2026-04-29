@@ -155,10 +155,20 @@ if run_btn:
             st.markdown("#### 生成結果")
 
             note_title = formatted.get("note", {}).get("title", "")
+            note_content = formatted.get("note", {}).get("content", summary)
+
             if note_title:
                 st.success(f"記事タイトル：{note_title}")
 
-            with st.expander("📄 マーケットレポート全文", expanded=True):
+            # noteコピーエリア
+            with st.expander("📝 note投稿用（タイトル＋本文）", expanded=True):
+                st.markdown("**タイトル**（コピーして貼り付け）")
+                st.code(note_title, language=None)
+                st.markdown("**本文**（コピーして貼り付け）")
+                st.text_area("note本文", note_content, height=400, key="note_content_copy")
+                st.caption("👆 上の本文をコピーして https://note.com/notes/new に貼り付けてください")
+
+            with st.expander("📄 マーケットレポート全文", expanded=False):
                 st.markdown(summary)
 
             tweets = formatted.get("tweets", [])
