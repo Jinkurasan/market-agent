@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>market-agent 組織図</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; padding: 40px 20px; min-width: 900px; }
+  h1 { text-align: center; font-size: 22px; color: #90cdf4; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #718096; font-size: 13px; margin-bottom: 40px; }
+
+  /* ── 上段：社長→COO ── */
+  .top-row { display: flex; flex-direction: column; align-items: center; margin-bottom: 32px; }
+  .president { background: #1a2332; border: 2px solid #f6ad55; border-radius: 12px; padding: 12px 36px; text-align: center; }
+  .president .title { font-size: 12px; color: #f6ad55; font-weight: 700; letter-spacing: 1px; }
+  .president .name  { font-size: 15px; color: #fefefe; margin-top: 2px; }
+
+  .coo-box { background: #1a2332; border: 2px solid #e53e3e; border-radius: 12px; padding: 12px 40px; text-align: center; }
+  .coo-box .title { font-size: 12px; color: #fc8181; font-weight: 700; letter-spacing: 1px; }
+  .coo-box .name  { font-size: 15px; color: #fefefe; margin-top: 2px; }
+  .coo-box .desc  { font-size: 11px; color: #718096; margin-top: 4px; }
+
+  .down-arrow { color: #4a5568; font-size: 22px; margin: 8px 0; text-align: center; }
+
+  /* ── 部署ライン ── */
+  .dept-row { display: flex; align-items: flex-start; justify-content: center; gap: 12px; flex-wrap: nowrap; }
+
+  .dept { width: 148px; border-radius: 10px; padding: 14px 10px; text-align: center; flex-shrink: 0; }
+  .dept .icon { font-size: 24px; margin-bottom: 6px; }
+  .dept .name { font-size: 12px; font-weight: 700; margin-bottom: 4px; line-height: 1.4; }
+  .dept .desc { font-size: 10px; color: #a0aec0; line-height: 1.5; }
+  .dept .badge { font-size: 9px; border-radius: 4px; padding: 1px 6px; margin-top: 6px; display: inline-block; }
+
+  .dept-collect  { background: #1a2332; border: 1.5px solid #3182ce; }
+  .dept-analyze  { background: #1a2332; border: 1.5px solid #805ad5; }
+  .dept-market   { background: #1a2332; border: 1.5px solid #d69e2e; }
+  .dept-sns      { background: #1a2332; border: 1.5px solid #e53e3e; }
+  .dept-content  { background: #1a2332; border: 1.5px solid #ed8936; }
+  .dept-execute  { background: #1a2332; border: 1.5px solid #38a169; }
+
+  .dept-collect .name  { color: #63b3ed; }
+  .dept-analyze .name  { color: #b794f4; }
+  .dept-market .name   { color: #f6e05e; }
+  .dept-sns .name      { color: #fc8181; }
+  .dept-content .name  { color: #fbd38d; }
+  .dept-execute .name  { color: #68d391; }
+
+  .badge-new { background: #e53e3e; color: white; }
+  .badge-ok  { background: #276749; color: #9ae6b4; }
+
+  /* ── 下段：ソース＋出力 ── */
+  .bottom-row { display: flex; justify-content: center; gap: 48px; margin-top: 36px; }
+  .bottom-col { display: flex; flex-direction: column; gap: 8px; min-width: 180px; }
+  .section-label { font-size: 11px; color: #4a5568; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .tag { border-radius: 8px; padding: 6px 12px; font-size: 11px; }
+  .tag-done { background: #1a202c; border: 1px solid #38a169; color: #68d391; }
+  .tag-soon { background: #1a202c; border: 1px dashed #4a5568; color: #4a5568; }
+
+  /* 凡例 */
+  .legend { margin-top: 36px; text-align: center; }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; margin: 0 14px; font-size: 11px; color: #718096; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* コマンド */
+  .commands { margin: 32px auto 0; max-width: 560px; background: #1a202c; border-radius: 10px; padding: 16px 20px; }
+  .commands h3 { font-size: 12px; color: #718096; margin-bottom: 10px; letter-spacing: 1px; }
+  .cmd-item { display: flex; gap: 12px; margin-bottom: 6px; align-items: baseline; }
+  .cmd { font-family: monospace; font-size: 12px; color: #90cdf4; white-space: nowrap; }
+  .cmd-desc { font-size: 11px; color: #718096; }
+</style>
+</head>
+<body>
+
+<h1>market-agent 組織図</h1>
+<p class="subtitle">金融情報を自動収集 → 要約 → 戦略立案 → 配信するマルチエージェントシステム</p>
+
+<!-- 社長 -->
+<div class="top-row">
+  <div class="president">
+    <div class="title">PRESIDENT</div>
+    <div class="name">あなた（社長）</div>
+  </div>
+  <div class="down-arrow">↓</div>
+
+  <!-- COO -->
+  <div class="coo-box">
+    <div class="title">COO</div>
+    <div class="name">最高執行責任者</div>
+    <div class="desc">戦略立案・部署間調整・社長への報告</div>
+  </div>
+  <div class="down-arrow">↓</div>
+</div>
+
+<!-- 6部署 -->
+<div class="dept-row">
+
+  <div class="dept dept-collect">
+    <div class="icon">🔍</div>
+    <div class="name">情報収集部</div>
+    <div class="desc">Bloomberg・WSJ・investing・FedWatch・OANDAなど各ソースを巡回</div>
+    <span class="badge badge-ok">稼働中</span>
+  </div>
+
+  <div class="dept dept-analyze">
+    <div class="icon">🧠</div>
+    <div class="name">分析・リサーチ部</div>
+    <div class="desc">収集データを分析して日本語マーケットレポートを生成</div>
+    <span class="badge badge-ok">稼働中</span>
+  </div>
+
+  <div class="dept dept-market">
+    <div class="icon">✍️</div>
+    <div class="name">マーケティング部</div>
+    <div class="desc">各プラットフォーム向けにコンテンツを最適化</div>
+    <span class="badge badge-ok">稼働中</span>
+  </div>
+
+  <div class="dept dept-sns">
+    <div class="icon">📣</div>
+    <div class="name">SNS戦略部</div>
+    <div class="desc">X・noteでのフォロワー獲得・エンゲージメント戦略</div>
+    <span class="badge badge-new">NEW</span>
+  </div>
+
+  <div class="dept dept-content">
+    <div class="icon">📅</div>
+    <div class="name">コンテンツ企画部</div>
+    <div class="desc">企画・カレンダー管理・シリーズ企画・トレンド分析</div>
+    <span class="badge badge-new">NEW</span>
+  </div>
+
+  <div class="dept dept-execute">
+    <div class="icon">🚀</div>
+    <div class="name">配信・実行部</div>
+    <div class="desc">Notion・noteに自動で投稿する</div>
+    <span class="badge badge-ok">稼働中</span>
+  </div>
+
+</div>
+
+<!-- 情報ソース + 配信先 -->
+<div class="bottom-row">
+  <div class="bottom-col">
+    <div class="section-label">情報ソース</div>
+    <div class="tag tag-done">📰 Bloomberg RSS</div>
+    <div class="tag tag-done">📰 WSJ RSS</div>
+    <div class="tag tag-done">📊 investing.com</div>
+    <div class="tag tag-done">🏦 CME FedWatch</div>
+    <div class="tag tag-done">💱 OANDA 通貨強弱</div>
+    <div class="tag tag-done">🐑 羊飼いFX</div>
+    <div class="tag tag-done">📅 経済指標カレンダー</div>
+    <div class="tag tag-done">📈 FXi24</div>
+    <div class="tag tag-done">📈 MarketWin24</div>
+    <div class="tag tag-soon">🐦 X監視（後回し）</div>
+  </div>
+  <div class="bottom-col">
+    <div class="section-label">配信先</div>
+    <div class="tag tag-done">📓 Notion（設定済み）</div>
+    <div class="tag tag-soon">📝 note.com（設定待ち）</div>
+    <div class="tag tag-soon">🐦 X投稿（後回し）</div>
+  </div>
+</div>
+
+<!-- コマンド一覧 -->
+<div class="commands">
+  <h3>COMMANDS</h3>
+  <div class="cmd-item"><span class="cmd">python main.py --dry-run</span><span class="cmd-desc">情報収集〜記事生成（投稿なし）</span></div>
+  <div class="cmd-item"><span class="cmd">python main.py</span><span class="cmd-desc">本番実行（Notion/noteに投稿）</span></div>
+  <div class="cmd-item"><span class="cmd">python main.py --strategy</span><span class="cmd-desc">COO戦略レポートを生成</span></div>
+  <div class="cmd-item"><span class="cmd">python main.py --show</span><span class="cmd-desc">最後に生成した記事を表示</span></div>
+</div>
+
+<!-- 凡例 -->
+<div class="legend">
+  <span class="legend-item"><span class="dot" style="background:#38a169"></span> 稼働中</span>
+  <span class="legend-item"><span class="dot" style="background:#e53e3e"></span> 新設（NEW）</span>
+  <span class="legend-item"><span class="dot" style="background:#4a5568"></span> 未実装（後回し）</span>
+</div>
+
+</body>
+</html>
