@@ -2,33 +2,19 @@
 各情報ソースからデータを収集するスクレイパー群。
 各関数はCollectorAgentのツールとして呼び出される。
 """
-import json
-from pathlib import Path
-from datetime import datetime
-
 import feedparser
 import httpx
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
 
-from config import SESSION_DIR, BLOOMBERG_EMAIL, BLOOMBERG_PASSWORD, WSJ_EMAIL, WSJ_PASSWORD, HITSUJI_FX_URL
+from config import HITSUJI_FX_URL
 
-
-def _save_session(context, site_name: str):
-    path = SESSION_DIR / f"{site_name}.json"
-    context.storage_state(path=str(path))
+_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
-def _load_context(playwright, site_name: str, headless: bool = True):
-    browser = playwright.chromium.launch(headless=headless)
-    session_file = SESSION_DIR / f"{site_name}.json"
-    if session_file.exists():
-        ctx = browser.new_context(storage_state=str(session_file))
-    else:
-        ctx = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        )
-    return browser, ctx
+def _fetch_html(url: str) -> str:
+    resp = httpx.get(url, headers=_HEADERS, timeout=15.0, follow_redirects=True)
+    resp.raise_for_status()
+    return resp.text
 
 
 # ─── Bloomberg ────────────────────────────────────────────────────────────────
@@ -76,73 +62,43 @@ def scrape_wsj(max_articles: int = 10) -> dict:
 
 def scrape_investing_news(max_articles: int = 10) -> dict:
     """investing.com日本版から最新ニュースを取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "investing")
-            page = ctx.new_page()
-            page.goto("https://jp.investing.com/news/latest-news", timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            articles = []
-
-            for item in soup.select("article.js-article-item, div[data-test='article-item']")[:max_articles]:
-                title_el = item.select_one("a.title, h3 a, a[data-id]")
-                if title_el:
-                    articles.append({
-                        "title": title_el.get_text(strip=True),
-                        "link": "https://jp.investing.com" + title_el.get("href", ""),
-                    })
-
-            browser.close()
-            return {"source": "investing.com", "articles": articles, "status": "success"}
+        html = _fetch_html("https://jp.investing.com/news/latest-news")
+        soup = BeautifulSoup(html, "lxml")
+        articles = []
+        for item in soup.select("article.js-article-item, div[data-test='article-item']")[:max_articles]:
+            title_el = item.select_one("a.title, h3 a, a[data-id]")
+            if title_el:
+                href = title_el.get("href", "")
+                link = href if href.startswith("http") else "https://jp.investing.com" + href
+                articles.append({"title": title_el.get_text(strip=True), "link": link})
+        return {"source": "investing.com", "articles": articles, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "investing.com", "error": str(e), "status": "failed"}
 
 
 def scrape_economic_calendar() -> dict:
-    """investing.com経済指標カレンダーを取得（今日・明日分）"""
-    browser = None
+    """investing.com経済指標カレンダーを取得"""
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "investing_cal")
-            page = ctx.new_page()
-            page.goto("https://jp.investing.com/economic-calendar/", timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            events = []
-
-            for row in soup.select("tr.js-event-item")[:20]:
-                time_el = row.select_one("td.first.left.time")
-                name_el = row.select_one("td.left.event a")
-                actual_el = row.select_one("td.act")
-                forecast_el = row.select_one("td.fore")
-                prev_el = row.select_one("td.prev")
-
-                if name_el:
-                    events.append({
-                        "time": time_el.get_text(strip=True) if time_el else "",
-                        "event": name_el.get_text(strip=True),
-                        "actual": actual_el.get_text(strip=True) if actual_el else "",
-                        "forecast": forecast_el.get_text(strip=True) if forecast_el else "",
-                        "previous": prev_el.get_text(strip=True) if prev_el else "",
-                    })
-
-            browser.close()
-            return {"source": "Economic Calendar", "events": events, "status": "success"}
+        html = _fetch_html("https://jp.investing.com/economic-calendar/")
+        soup = BeautifulSoup(html, "lxml")
+        events = []
+        for row in soup.select("tr.js-event-item")[:20]:
+            time_el = row.select_one("td.first.left.time")
+            name_el = row.select_one("td.left.event a")
+            actual_el = row.select_one("td.act")
+            forecast_el = row.select_one("td.fore")
+            prev_el = row.select_one("td.prev")
+            if name_el:
+                events.append({
+                    "time": time_el.get_text(strip=True) if time_el else "",
+                    "event": name_el.get_text(strip=True),
+                    "actual": actual_el.get_text(strip=True) if actual_el else "",
+                    "forecast": forecast_el.get_text(strip=True) if forecast_el else "",
+                    "previous": prev_el.get_text(strip=True) if prev_el else "",
+                })
+        return {"source": "Economic Calendar", "events": events, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "Economic Calendar", "error": str(e), "status": "failed"}
 
 
@@ -150,41 +106,18 @@ def scrape_economic_calendar() -> dict:
 
 def scrape_fedwatch() -> dict:
     """CME FedWatchからFF金利の市場予測確率を取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "fedwatch")
-            page = ctx.new_page()
-            page.goto(
-                "https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html",
-                timeout=20000,
-            )
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            probabilities = []
-
-            for row in soup.select("table tbody tr")[:10]:
-                cells = row.find_all("td")
-                if cells:
-                    probabilities.append([c.get_text(strip=True) for c in cells])
-
-            summary_el = soup.select_one("div.probability, div[class*='fedwatch']")
-            summary = summary_el.get_text(strip=True)[:500] if summary_el else ""
-
-            browser.close()
-            return {
-                "source": "FedWatch",
-                "probabilities": probabilities,
-                "summary": summary,
-                "status": "success",
-            }
+        html = _fetch_html("https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html")
+        soup = BeautifulSoup(html, "lxml")
+        probabilities = []
+        for row in soup.select("table tbody tr")[:10]:
+            cells = row.find_all("td")
+            if cells:
+                probabilities.append([c.get_text(strip=True) for c in cells])
+        summary_el = soup.select_one("div.probability, div[class*='fedwatch']")
+        summary = summary_el.get_text(strip=True)[:500] if summary_el else ""
+        return {"source": "FedWatch", "probabilities": probabilities, "summary": summary, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "FedWatch", "error": str(e), "status": "failed"}
 
 
@@ -192,30 +125,16 @@ def scrape_fedwatch() -> dict:
 
 def scrape_oanda_currency_strength() -> dict:
     """OANDAの通貨強弱データを取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "oanda")
-            page = ctx.new_page()
-            page.goto("https://www.oanda.jp/rate/", timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            rates = []
-
-            for row in soup.select("table tr, div.rate-item")[:20]:
-                text = row.get_text(separator=" ", strip=True)
-                if text and any(c in text for c in ["USD", "EUR", "JPY", "GBP", "AUD"]):
-                    rates.append(text[:100])
-
-            browser.close()
-            return {"source": "OANDA", "rates": rates, "status": "success"}
+        html = _fetch_html("https://www.oanda.jp/rate/")
+        soup = BeautifulSoup(html, "lxml")
+        rates = []
+        for row in soup.select("table tr, div.rate-item")[:20]:
+            text = row.get_text(separator=" ", strip=True)
+            if text and any(c in text for c in ["USD", "EUR", "JPY", "GBP", "AUD"]):
+                rates.append(text[:100])
+        return {"source": "OANDA", "rates": rates, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "OANDA", "error": str(e), "status": "failed"}
 
 
@@ -223,34 +142,20 @@ def scrape_oanda_currency_strength() -> dict:
 
 def scrape_hitsuji_fx() -> dict:
     """羊飼いFXから最新情報・指標スケジュールを取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "hitsuji")
-            page = ctx.new_page()
-            page.goto(HITSUJI_FX_URL, timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            posts = []
-
-            for item in soup.select("article, .post, .entry")[:5]:
-                title_el = item.select_one("h1, h2, h3, .entry-title")
-                content_el = item.select_one(".entry-content, .post-content, p")
-                if title_el:
-                    posts.append({
-                        "title": title_el.get_text(strip=True),
-                        "content": content_el.get_text(strip=True)[:300] if content_el else "",
-                    })
-
-            browser.close()
-            return {"source": "羊飼いFX", "posts": posts, "status": "success"}
+        html = _fetch_html(HITSUJI_FX_URL)
+        soup = BeautifulSoup(html, "lxml")
+        posts = []
+        for item in soup.select("article, .post, .entry")[:5]:
+            title_el = item.select_one("h1, h2, h3, .entry-title")
+            content_el = item.select_one(".entry-content, .post-content, p")
+            if title_el:
+                posts.append({
+                    "title": title_el.get_text(strip=True),
+                    "content": content_el.get_text(strip=True)[:300] if content_el else "",
+                })
+        return {"source": "羊飼いFX", "posts": posts, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "羊飼いFX", "error": str(e), "status": "failed"}
 
 
@@ -258,34 +163,20 @@ def scrape_hitsuji_fx() -> dict:
 
 def scrape_fxi24(max_articles: int = 10) -> dict:
     """FXi24から最新FX・マーケットニュースを取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "fxi24")
-            page = ctx.new_page()
-            page.goto("https://fxi24.com/", timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            articles = []
-
-            for item in soup.select("article, .post, .entry, li.news-item")[:max_articles]:
-                title_el = item.select_one("h1, h2, h3, a")
-                content_el = item.select_one("p, .excerpt, .summary")
-                if title_el and title_el.get_text(strip=True):
-                    articles.append({
-                        "title": title_el.get_text(strip=True),
-                        "content": content_el.get_text(strip=True)[:200] if content_el else "",
-                    })
-
-            browser.close()
-            return {"source": "FXi24", "articles": articles, "status": "success"}
+        html = _fetch_html("https://fxi24.com/")
+        soup = BeautifulSoup(html, "lxml")
+        articles = []
+        for item in soup.select("article, .post, .entry, li.news-item")[:max_articles]:
+            title_el = item.select_one("h1, h2, h3, a")
+            content_el = item.select_one("p, .excerpt, .summary")
+            if title_el and title_el.get_text(strip=True):
+                articles.append({
+                    "title": title_el.get_text(strip=True),
+                    "content": content_el.get_text(strip=True)[:200] if content_el else "",
+                })
+        return {"source": "FXi24", "articles": articles, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "FXi24", "error": str(e), "status": "failed"}
 
 
@@ -293,34 +184,20 @@ def scrape_fxi24(max_articles: int = 10) -> dict:
 
 def scrape_marketwin24(max_articles: int = 10) -> dict:
     """MarketWin24から最新マーケットニュースを取得"""
-    browser = None
     try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "marketwin24")
-            page = ctx.new_page()
-            page.goto("https://marketwin24.com/", timeout=20000)
-            page.wait_for_load_state("domcontentloaded", timeout=10000)
-
-            soup = BeautifulSoup(page.content(), "lxml")
-            articles = []
-
-            for item in soup.select("article, .post, .entry, li.news-item")[:max_articles]:
-                title_el = item.select_one("h1, h2, h3, a")
-                content_el = item.select_one("p, .excerpt, .summary")
-                if title_el and title_el.get_text(strip=True):
-                    articles.append({
-                        "title": title_el.get_text(strip=True),
-                        "content": content_el.get_text(strip=True)[:200] if content_el else "",
-                    })
-
-            browser.close()
-            return {"source": "MarketWin24", "articles": articles, "status": "success"}
+        html = _fetch_html("https://marketwin24.com/")
+        soup = BeautifulSoup(html, "lxml")
+        articles = []
+        for item in soup.select("article, .post, .entry, li.news-item")[:max_articles]:
+            title_el = item.select_one("h1, h2, h3, a")
+            content_el = item.select_one("p, .excerpt, .summary")
+            if title_el and title_el.get_text(strip=True):
+                articles.append({
+                    "title": title_el.get_text(strip=True),
+                    "content": content_el.get_text(strip=True)[:200] if content_el else "",
+                })
+        return {"source": "MarketWin24", "articles": articles, "status": "success"}
     except Exception as e:
-        if browser:
-            try:
-                browser.close()
-            except Exception:
-                pass
         return {"source": "MarketWin24", "error": str(e), "status": "failed"}
 
 
@@ -413,50 +290,6 @@ def scrape_minkabu(max_articles: int = 10) -> dict:
         except Exception:
             continue
     return {"source": "みんかぶ", "error": "取得失敗", "status": "failed"}
-
-
-# ─── Bloomberg/WSJ フルスクレイピング（ログイン後）────────────────────────────
-
-def login_bloomberg() -> dict:
-    """Bloombergにログインしてセッションを保存（初回のみ手動実行）"""
-    if not BLOOMBERG_EMAIL or not BLOOMBERG_PASSWORD:
-        return {"status": "skipped", "message": "Bloomberg認証情報が未設定"}
-    try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "bloomberg", headless=False)
-            page = ctx.new_page()
-            page.goto("https://www.bloomberg.com/account/signin")
-            page.fill("input[name='email']", BLOOMBERG_EMAIL)
-            page.click("button[type='submit']")
-            page.wait_for_timeout(2000)
-            page.fill("input[name='password']", BLOOMBERG_PASSWORD)
-            page.click("button[type='submit']")
-            page.wait_for_load_state("networkidle")
-            _save_session(ctx, "bloomberg")
-            browser.close()
-            return {"status": "success", "message": "Bloombergセッション保存完了"}
-    except Exception as e:
-        return {"status": "failed", "error": str(e)}
-
-
-def login_wsj() -> dict:
-    """WSJにログインしてセッションを保存（初回のみ手動実行）"""
-    if not WSJ_EMAIL or not WSJ_PASSWORD:
-        return {"status": "skipped", "message": "WSJ認証情報が未設定"}
-    try:
-        with sync_playwright() as p:
-            browser, ctx = _load_context(p, "wsj", headless=False)
-            page = ctx.new_page()
-            page.goto("https://accounts.wsj.com/login")
-            page.fill("input[name='username']", WSJ_EMAIL)
-            page.fill("input[name='password']", WSJ_PASSWORD)
-            page.click("button[type='submit']")
-            page.wait_for_load_state("networkidle")
-            _save_session(ctx, "wsj")
-            browser.close()
-            return {"status": "success", "message": "WSJセッション保存完了"}
-    except Exception as e:
-        return {"status": "failed", "error": str(e)}
 
 
 # ツール定義 (CollectorAgentがClaudeに渡すスキーマ)
