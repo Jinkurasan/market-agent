@@ -33,12 +33,14 @@ class BaseAgent:
             }
         ]
 
-    def run(self, user_message: str) -> str:
+    def run(self, user_message: str, max_turns: int = 15) -> str:
         """エージェントを実行してテキスト結果を返す"""
         console.print(f"\n[bold cyan]▶ {self.name}[/bold cyan] 起動中...")
         messages = [{"role": "user", "content": user_message}]
+        turns = 0
 
-        while True:
+        while turns < max_turns:
+            turns += 1
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=8096,
@@ -71,6 +73,8 @@ class BaseAgent:
                 messages.append({"role": "user", "content": tool_results})
             else:
                 return self._extract_text(response.content)
+
+        return self._extract_text(messages[-1].get("content", []) if isinstance(messages[-1].get("content"), list) else [])
 
     def _extract_text(self, content) -> str:
         return "\n".join(
