@@ -147,7 +147,20 @@ if run_btn:
                     f"noteタイトル: {formatted.get('note', {}).get('title', 'マーケットレポート')}\n"
                     f"note本文:\n{formatted.get('note', {}).get('content', summary)}"
                 )
-                st.write("✅ 配信 完了")
+                st.write("✅ Notion投稿 完了")
+
+                # LINE自動配信
+                line_content_auto = formatted.get("line", "")
+                if line_content_auto:
+                    from config import LINE_CHANNEL_ACCESS_TOKEN
+                    if LINE_CHANNEL_ACCESS_TOKEN:
+                        st.write("📱 LINE配信中...")
+                        from tools.line_sender import send_line_broadcast
+                        line_result = send_line_broadcast(line_content_auto)
+                        if line_result["status"] == "success":
+                            st.write("✅ LINE配信 完了")
+                        else:
+                            st.write(f"⚠️ LINE配信失敗: {line_result.get('error', '')}")
 
             status_box.update(label="✅ 完了！", state="complete")
 
@@ -174,19 +187,22 @@ if run_btn:
 
             line_content = formatted.get("line", "")
             if line_content:
-                with st.expander("📱 LINE配信", expanded=True):
+                with st.expander("📱 LINE配信内容", expanded=True):
                     st.text_area("LINE本文", line_content, height=200, key="line_content_copy")
-                    from config import LINE_CHANNEL_ACCESS_TOKEN
-                    if LINE_CHANNEL_ACCESS_TOKEN:
-                        if st.button("💬 LINEに今すぐ配信", type="primary"):
-                            from tools.line_sender import send_line_broadcast
-                            result = send_line_broadcast(line_content)
-                            if result["status"] == "success":
-                                st.success("✅ LINE配信完了！フォロワー全員に送信しました")
-                            else:
-                                st.error(f"❌ LINE配信失敗: {result.get('error', '')}")
+                    if dry_run:
+                        from config import LINE_CHANNEL_ACCESS_TOKEN
+                        if LINE_CHANNEL_ACCESS_TOKEN:
+                            if st.button("💬 LINEに今すぐ配信", type="primary"):
+                                from tools.line_sender import send_line_broadcast
+                                result = send_line_broadcast(line_content)
+                                if result["status"] == "success":
+                                    st.success("✅ LINE配信完了！")
+                                else:
+                                    st.error(f"❌ LINE配信失敗: {result.get('error', '')}")
+                        else:
+                            st.caption("LINE未設定 — Streamlit Cloud SecretsにLINE_CHANNEL_ACCESS_TOKENを追加してください")
                     else:
-                        st.caption("👆 コピーしてLINE公式アカウントの管理画面から配信してください（LINE未設定）")
+                        st.caption("✅ 配信済み（テストモードOFFで自動送信されました）")
 
             tweets = formatted.get("tweets", [])
             if tweets:
