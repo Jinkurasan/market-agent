@@ -17,14 +17,19 @@ def _fetch_html(url: str) -> str:
     return resp.text
 
 
+def _fetch_rss(url: str):
+    resp = httpx.get(url, headers=_HEADERS, timeout=15.0, follow_redirects=True)
+    return feedparser.parse(resp.content)
+
+
 # ─── Bloomberg ────────────────────────────────────────────────────────────────
 
 def scrape_bloomberg(max_articles: int = 10) -> dict:
     """Bloomberg RSSから最新マーケットニュースを取得"""
     try:
-        feed = feedparser.parse("https://feeds.bloomberg.com/markets/news.rss")
+        feed = _fetch_rss("https://feeds.bloomberg.com/markets/news.rss")
         if not feed.entries:
-            feed = feedparser.parse("https://feeds.bloomberg.com/technology/news.rss")
+            feed = _fetch_rss("https://feeds.bloomberg.com/technology/news.rss")
 
         articles = []
         for entry in feed.entries[:max_articles]:
@@ -44,7 +49,7 @@ def scrape_bloomberg(max_articles: int = 10) -> dict:
 def scrape_wsj(max_articles: int = 10) -> dict:
     """WSJ RSSから最新マーケットニュースを取得"""
     try:
-        feed = feedparser.parse("https://feeds.a.dj.com/rss/RSSMarketsMain.xml")
+        feed = _fetch_rss("https://feeds.a.dj.com/rss/RSSMarketsMain.xml")
         articles = []
         for entry in feed.entries[:max_articles]:
             articles.append({
@@ -212,7 +217,7 @@ def scrape_reuters_japan(max_articles: int = 10) -> dict:
     ]
     for url in rss_urls:
         try:
-            feed = feedparser.parse(url)
+            feed = _fetch_rss(url)
             if feed.entries:
                 articles = []
                 for entry in feed.entries[:max_articles]:
@@ -233,7 +238,7 @@ def scrape_reuters_japan(max_articles: int = 10) -> dict:
 def scrape_nhk_economy(max_articles: int = 10) -> dict:
     """NHKニュースの経済カテゴリからRSSで取得"""
     try:
-        feed = feedparser.parse("https://www.nhk.or.jp/rss/news/cat6.xml")
+        feed = _fetch_rss("https://www.nhk.or.jp/rss/news/cat6.xml")
         articles = []
         for entry in feed.entries[:max_articles]:
             articles.append({
@@ -252,7 +257,7 @@ def scrape_nhk_economy(max_articles: int = 10) -> dict:
 def scrape_toyo_keizai(max_articles: int = 10) -> dict:
     """東洋経済オンラインからビジネス・経済ニュースをRSSで取得"""
     try:
-        feed = feedparser.parse("https://toyokeizai.net/list/feed/rss")
+        feed = _fetch_rss("https://toyokeizai.net/list/feed/rss")
         articles = []
         for entry in feed.entries[:max_articles]:
             articles.append({
@@ -276,7 +281,7 @@ def scrape_minkabu(max_articles: int = 10) -> dict:
     ]
     for url in rss_urls:
         try:
-            feed = feedparser.parse(url)
+            feed = _fetch_rss(url)
             if feed.entries:
                 articles = []
                 for entry in feed.entries[:max_articles]:
