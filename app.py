@@ -58,18 +58,19 @@ st.divider()
 
 # ── ステータス確認 ───────────────────────────────────────────────────────────
 def check_status() -> dict:
-    from config import ANTHROPIC_API_KEY, NOTION_API_KEY, NOTION_DATABASE_ID, NOTE_EMAIL
+    from config import ANTHROPIC_API_KEY, NOTION_API_KEY, NOTION_DATABASE_ID, NOTE_EMAIL, LINE_CHANNEL_ACCESS_TOKEN
     return {
         "Anthropic API": bool(ANTHROPIC_API_KEY and not ANTHROPIC_API_KEY.startswith("ここに")),
         "Notion":        bool(NOTION_API_KEY and NOTION_DATABASE_ID),
         "note.com":      bool(NOTE_EMAIL),
+        "LINE":          bool(LINE_CHANNEL_ACCESS_TOKEN),
     }
 
 with st.container():
     st.markdown("#### システム状態")
     status = check_status()
     cols = st.columns(len(status))
-    icons = {"Anthropic API": "🤖", "Notion": "📓", "note.com": "📝"}
+    icons = {"Anthropic API": "🤖", "Notion": "📓", "note.com": "📝", "LINE": "💬"}
     for col, (name, ok) in zip(cols, status.items()):
         with col:
             label = "接続済み" if ok else "未設定"
@@ -173,9 +174,19 @@ if run_btn:
 
             line_content = formatted.get("line", "")
             if line_content:
-                with st.expander("📱 LINE配信用（コピーして貼り付け）", expanded=True):
+                with st.expander("📱 LINE配信", expanded=True):
                     st.text_area("LINE本文", line_content, height=200, key="line_content_copy")
-                    st.caption("👆 コピーしてLINE公式アカウントの管理画面から配信してください")
+                    from config import LINE_CHANNEL_ACCESS_TOKEN
+                    if LINE_CHANNEL_ACCESS_TOKEN:
+                        if st.button("💬 LINEに今すぐ配信", type="primary"):
+                            from tools.line_sender import send_line_broadcast
+                            result = send_line_broadcast(line_content)
+                            if result["status"] == "success":
+                                st.success("✅ LINE配信完了！フォロワー全員に送信しました")
+                            else:
+                                st.error(f"❌ LINE配信失敗: {result.get('error', '')}")
+                    else:
+                        st.caption("👆 コピーしてLINE公式アカウントの管理画面から配信してください（LINE未設定）")
 
             tweets = formatted.get("tweets", [])
             if tweets:
