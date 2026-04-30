@@ -71,10 +71,16 @@ with st.container():
     status = check_status()
     cols = st.columns(len(status))
     icons = {"Anthropic API": "🤖", "Notion": "📓", "note.com": "📝", "LINE": "💬"}
+    labels = {
+        "Anthropic API": ("接続済み", "未設定"),
+        "Notion":        ("接続済み", "未設定"),
+        "note.com":      ("手動投稿", "未設定"),  # note.comはAPIなし・手動コピペ方式
+        "LINE":          ("接続済み", "未設定"),
+    }
     for col, (name, ok) in zip(cols, status.items()):
         with col:
-            label = "接続済み" if ok else "未設定"
             css = "status-ok" if ok else "status-warn"
+            label = labels[name][0] if ok else labels[name][1]
             st.markdown(f'<p class="{css}">{icons[name]} {name}：{label}</p>', unsafe_allow_html=True)
 
 st.divider()
