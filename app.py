@@ -171,6 +171,12 @@ if run_btn:
             with st.expander("📄 マーケットレポート全文", expanded=False):
                 st.markdown(summary)
 
+            line_content = formatted.get("line", "")
+            if line_content:
+                with st.expander("📱 LINE配信用（コピーして貼り付け）", expanded=True):
+                    st.text_area("LINE本文", line_content, height=200, key="line_content_copy")
+                    st.caption("👆 コピーしてLINE公式アカウントの管理画面から配信してください")
+
             tweets = formatted.get("tweets", [])
             if tweets:
                 with st.expander(f"🐦 ツイート候補（{len(tweets)}件）"):

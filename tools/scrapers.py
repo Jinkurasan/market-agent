@@ -285,6 +285,97 @@ def scrape_marketwin24(max_articles: int = 10) -> dict:
         return {"source": "MarketWin24", "error": str(e), "status": "failed"}
 
 
+# ─── Reuters Japan ────────────────────────────────────────────────────────────
+
+def scrape_reuters_japan(max_articles: int = 10) -> dict:
+    """ロイター日本版からマーケット・経済ニュースをRSSで取得"""
+    rss_urls = [
+        "https://feeds.reuters.com/reuters/JPbusinessNews.xml",
+        "https://feeds.reuters.com/reuters/JPTopNews.xml",
+        "https://jp.reuters.com/tools/rss",
+    ]
+    for url in rss_urls:
+        try:
+            feed = feedparser.parse(url)
+            if feed.entries:
+                articles = []
+                for entry in feed.entries[:max_articles]:
+                    articles.append({
+                        "title": entry.get("title", ""),
+                        "summary": entry.get("summary", "")[:300],
+                        "link": entry.get("link", ""),
+                        "published": entry.get("published", ""),
+                    })
+                return {"source": "Reuters Japan", "articles": articles, "status": "success"}
+        except Exception:
+            continue
+    return {"source": "Reuters Japan", "error": "全URLで取得失敗", "status": "failed"}
+
+
+# ─── NHK 経済ニュース ──────────────────────────────────────────────────────────
+
+def scrape_nhk_economy(max_articles: int = 10) -> dict:
+    """NHKニュースの経済カテゴリからRSSで取得"""
+    try:
+        feed = feedparser.parse("https://www.nhk.or.jp/rss/news/cat6.xml")
+        articles = []
+        for entry in feed.entries[:max_articles]:
+            articles.append({
+                "title": entry.get("title", ""),
+                "summary": entry.get("summary", "")[:300],
+                "link": entry.get("link", ""),
+                "published": entry.get("published", ""),
+            })
+        return {"source": "NHK経済ニュース", "articles": articles, "status": "success"}
+    except Exception as e:
+        return {"source": "NHK経済ニュース", "error": str(e), "status": "failed"}
+
+
+# ─── 東洋経済オンライン ────────────────────────────────────────────────────────
+
+def scrape_toyo_keizai(max_articles: int = 10) -> dict:
+    """東洋経済オンラインからビジネス・経済ニュースをRSSで取得"""
+    try:
+        feed = feedparser.parse("https://toyokeizai.net/list/feed/rss")
+        articles = []
+        for entry in feed.entries[:max_articles]:
+            articles.append({
+                "title": entry.get("title", ""),
+                "summary": entry.get("summary", "")[:300],
+                "link": entry.get("link", ""),
+                "published": entry.get("published", ""),
+            })
+        return {"source": "東洋経済オンライン", "articles": articles, "status": "success"}
+    except Exception as e:
+        return {"source": "東洋経済オンライン", "error": str(e), "status": "failed"}
+
+
+# ─── Minkabu（株・FX情報）─────────────────────────────────────────────────────
+
+def scrape_minkabu(max_articles: int = 10) -> dict:
+    """みんかぶから株式・FX・マーケット情報をRSSで取得"""
+    rss_urls = [
+        "https://minkabu.jp/news/feed",
+        "https://fx.minkabu.jp/news/feed",
+    ]
+    for url in rss_urls:
+        try:
+            feed = feedparser.parse(url)
+            if feed.entries:
+                articles = []
+                for entry in feed.entries[:max_articles]:
+                    articles.append({
+                        "title": entry.get("title", ""),
+                        "summary": entry.get("summary", "")[:300],
+                        "link": entry.get("link", ""),
+                        "published": entry.get("published", ""),
+                    })
+                return {"source": "みんかぶ", "articles": articles, "status": "success"}
+        except Exception:
+            continue
+    return {"source": "みんかぶ", "error": "取得失敗", "status": "failed"}
+
+
 # ─── Bloomberg/WSJ フルスクレイピング（ログイン後）────────────────────────────
 
 def login_bloomberg() -> dict:
@@ -401,6 +492,46 @@ SCRAPER_TOOLS = [
             },
         },
     },
+    {
+        "name": "scrape_reuters_japan",
+        "description": "ロイター日本版から最新マーケット・経済ニュースを取得します",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_articles": {"type": "integer", "description": "取得する最大記事数", "default": 10}
+            },
+        },
+    },
+    {
+        "name": "scrape_nhk_economy",
+        "description": "NHKニュース経済カテゴリから最新情報を取得します",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_articles": {"type": "integer", "description": "取得する最大記事数", "default": 10}
+            },
+        },
+    },
+    {
+        "name": "scrape_toyo_keizai",
+        "description": "東洋経済オンラインからビジネス・経済ニュースを取得します",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_articles": {"type": "integer", "description": "取得する最大記事数", "default": 10}
+            },
+        },
+    },
+    {
+        "name": "scrape_minkabu",
+        "description": "みんかぶから株式・FX・マーケット情報を取得します",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_articles": {"type": "integer", "description": "取得する最大記事数", "default": 10}
+            },
+        },
+    },
 ]
 
 SCRAPER_EXECUTORS = {
@@ -413,4 +544,8 @@ SCRAPER_EXECUTORS = {
     "scrape_hitsuji_fx": scrape_hitsuji_fx,
     "scrape_fxi24": scrape_fxi24,
     "scrape_marketwin24": scrape_marketwin24,
+    "scrape_reuters_japan": scrape_reuters_japan,
+    "scrape_nhk_economy": scrape_nhk_economy,
+    "scrape_toyo_keizai": scrape_toyo_keizai,
+    "scrape_minkabu": scrape_minkabu,
 }
